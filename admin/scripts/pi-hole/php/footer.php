@@ -61,7 +61,7 @@
             echo $FTL_current;
             if(isset($FTL_commit)) { echo " (".$FTL_branch.", ".$FTL_commit.")"; }
             if($FTL_update){ ?> <a class="alert-link lookatme" href="https://github.com/pi-hole/FTL/releases" target="_blank">(有新版本更新!)</a><?php } ?>
-			<a href="https://blog.verkey.org" target="_blank"> 汉化:Verkey</a>
+			<a href="https://github.com/verkeys/Pi-hole-Chinese target="_blank"> 汉化:Verkey</a>
         </div>
         <div style="display: inline-block"><strong><a href="https://pi-hole.net/donate" target="_blank"><i class="fa fa-heart"></i> 捐赠</a></strong> 如果你发现本项目对你有帮助的话,请点击左侧捐赠按钮,我们会非常感谢！</div>
     </footer>
