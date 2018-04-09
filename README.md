@@ -8,4 +8,4 @@
 ### 未汉化内容
 - 页面内相关描述
 # 汉化效果
-//  ![主界面述]（https://github.com/verkeys/Pi-hole-Chinese/blob/master/snapshot/001.jpg）
+//  ![主界面]（https://raw.githubusercontent.com/verkeys/Pi-hole-Chinese/master/snapshot/001.jpg)
