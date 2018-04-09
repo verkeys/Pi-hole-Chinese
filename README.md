@@ -1,3 +1,2 @@
-# Pi-hole-Chinese
+# Pi-hole-汉化版
 
-test
