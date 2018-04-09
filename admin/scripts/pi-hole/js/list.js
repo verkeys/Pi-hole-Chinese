@@ -1,0 +1,225 @@
+/* Pi-hole: A black hole for Internet advertisements
+*  (c) 2017 Pi-hole, LLC (https://pi-hole.net)
+*  Network-wide ad blocking via your own hardware.
+*
+*  This file is copyright under the latest version of the EUPL.
+*  Please see LICENSE file for your rights under this license. */
+// IE likes to cache too much :P
+$.ajaxSetup({cache: false});
+
+// Get PHP info
+var token = $("#token").html();
+var listType = $("#list-type").html();
+var fullName = listType === "white" ? "白名单" : "黑名单";
+
+function sub(index, entry, arg) {
+    var domain = $("#"+index);
+    var locallistType = listType;
+    domain.hide("highlight");
+    if(arg === "wild")
+    {
+        locallistType = "wild";
+    }
+    $.ajax({
+        url: "scripts/pi-hole/php/sub.php",
+        method: "post",
+        data: {"domain":entry, "list":locallistType, "token":token},
+        success: function(response) {
+            if(response.length !== 0){
+                return;
+            }
+            domain.remove();
+        },
+        error: function(jqXHR, exception) {
+            alert("删除域名失败!");
+            domain.show({queue:true});
+        }
+    });
+}
+
+function refresh(fade) {
+    var listw;
+    var list = $("#list");
+    if(listType === "black")
+    {
+        listw = $("#list-wildcard");
+    }
+    if(fade) {
+        list.fadeOut(100);
+        if(listw)
+        {
+            listw.fadeOut(100);
+        }
+    }
+    $.ajax({
+        url: "scripts/pi-hole/php/get.php",
+        method: "get",
+        data: {"list":listType},
+        success: function(response) {
+            list.html("");
+            if(listw)
+            {
+                listw.html("");
+            }
+            var data = JSON.parse(response).sort();
+
+            if(data.length === 0) {
+                $("h3").hide();
+                if(listw)
+                {
+                    listw.html("<div class=\"alert alert-info\" role=\"alert\">当前" + fullName + "为空!</div>");
+                }
+                else
+                {
+                    list.html("<div class=\"alert alert-info\" role=\"alert\">当前 " + fullName + "为空!</div>");
+                }
+            }
+            else {
+                $("h3").show();
+                data.forEach(function (entry, index) {
+                    if(entry.substr(0,1) === "*")
+                    {
+                        // Wildcard entry
+                        // remove leading *
+                        entry = entry.substr(1, entry.length - 1);
+                        listw.append(
+                        "<li id=\"" + index + "\" class=\"list-group-item clearfix\">" + entry +
+                        "<button class=\"btn btn-danger btn-xs pull-right\" type=\"button\">" +
+                        "<span class=\"glyphicon glyphicon-trash\"></span></button></li>");
+                        // Handle button
+                        $("#list-wildcard #"+index+"").on("click", "button", function() {
+                            sub(index, entry, "wild");
+                        });
+                    }
+                    else
+                    {
+                        // Normal entry
+                        list.append(
+                        "<li id=\"" + index + "\" class=\"list-group-item clearfix\">" + entry +
+                        "<button class=\"btn btn-danger btn-xs pull-right\" type=\"button\">" +
+                        "<span class=\"glyphicon glyphicon-trash\"></span></button></li>");
+                        // Handle button
+                        $("#list #"+index+"").on("click", "button", function() {
+                            sub(index, entry, "exact");
+                        });
+                    }
+
+                });
+            }
+            list.fadeIn(100);
+            if(listw)
+            {
+                listw.fadeIn(100);
+            }
+        },
+        error: function(jqXHR, exception) {
+            $("#alFailure").show();
+        }
+    });
+}
+
+window.onload = refresh(false);
+
+function add(arg) {
+    var locallistType = listType;
+    var domain = $("#domain");
+    if(domain.val().length === 0){
+        return;
+    }
+    if(arg === "wild")
+    {
+        locallistType = "wild";
+    }
+
+    var alInfo = $("#alInfo");
+    var alSuccess = $("#alSuccess");
+    var alFailure = $("#alFailure");
+    var err = $("#err");
+    alInfo.show();
+    alSuccess.hide();
+    alFailure.hide();
+    $.ajax({
+        url: "scripts/pi-hole/php/add.php",
+        method: "post",
+        data: {"domain":domain.val().trim(), "list":locallistType, "token":token},
+        success: function(response) {
+          if (response.indexOf("] Pi-hole blocking is ") === -1) {
+            alFailure.show();
+            err.html(response);
+            alFailure.delay(4000).fadeOut(2000, function() {
+                alFailure.hide();
+            });
+            alInfo.delay(4000).fadeOut(2000, function() {
+                alInfo.hide();
+            });
+          } else {
+            alSuccess.show();
+            alSuccess.delay(1000).fadeOut(2000, function() {
+                alSuccess.hide();
+            });
+            alInfo.delay(1000).fadeOut(2000, function() {
+                alInfo.hide();
+            });
+            domain.val("");
+            refresh(true);
+          }
+        },
+        error: function(jqXHR, exception) {
+            alFailure.show();
+            err.html("");
+            alFailure.delay(1000).fadeOut(2000, function() {
+                alFailure.hide();
+            });
+            alInfo.delay(1000).fadeOut(2000, function() {
+                alInfo.hide();
+            });
+        }
+    });
+}
+
+
+
+// Handle enter button for adding domains
+$(document).keypress(function(e) {
+    if(e.which === 13 && $("#domain").is(":focus")) {
+        // Enter was pressed, and the input has focus
+        add("exact");
+    }
+});
+
+// Handle buttons
+$("#btnAdd").on("click", function() {
+    add("exact");
+});
+
+$("#btnAddWildcard").on("click", function() {
+    add("wild");
+});
+
+$("#btnRefresh").on("click", function() {
+    refresh(true);
+});
+
+// Handle hiding of alerts
+$(function(){
+    $("[data-hide]").on("click", function(){
+        $(this).closest("." + $(this).attr("data-hide")).hide();
+    });
+});
+
+// Wrap form-group's buttons to next line when viewed on a small screen
+$(window).on("resize",function() {
+    if ($(window).width() < 991) {
+        $(".form-group.input-group").removeClass("input-group").addClass("input-group-block");
+        $(".form-group.input-group-block > input").css("margin-bottom", "5px");
+        $(".form-group.input-group-block > .input-group-btn").removeClass("input-group-btn").addClass("btn-block text-center");
+    }
+    else {
+        $(".form-group.input-group-block").removeClass("input-group-block").addClass( "input-group" );
+        $(".form-group.input-group > input").css("margin-bottom","");
+        $(".form-group.input-group > .btn-block.text-center").removeClass("btn-block text-center").addClass("input-group-btn");
+    }
+});
+$(document).ready(function() {
+    $(window).trigger("resize");
+});
